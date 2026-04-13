@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <button id="openBtn">打开串口</button>
+  <button id="sendBtn" disabled>发送采集指令</button>
+  <div id="log"></div>
+
+  <script>
+    let port, reader, writer;
+
+    // 1. 打开串口（点击按钮触发）
+    document.getElementById('openBtn').addEventListener('click', async () => {
+      try {
+        // 请求用户选择串口
+        port = await navigator.serial.requestPort();
+        // 打开串口，配置参数
+        await port.open({ baudRate: 9600, dataBits: 8, stopBits: 1, parity: 'none' });
+        
+        // 初始化发送器
+        const textEncoder = new TextEncoderStream();
+        const writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
+        writer = textEncoder.writable.getWriter();
+
+        // 初始化接收器
+        const textDecoder = new TextDecoderStream();
+        const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+        reader = textDecoder.readable.getReader();
+
+        document.getElementById('sendBtn').disabled = false;
+        log('串口打开成功！');
+        
+        // 开始监听接收数据
+        readLoop();
+      } catch (err) {
+        log('错误: ' + err);
+      }
+    });
+
+    // 2. 发送采集指令（点击按钮触发）
+    document.getElementById('sendBtn').addEventListener('click', async () => {
+      // 【核心】发送Modbus RTU指令（读1号设备单数据）
+      // 注意：Web Serial发送的是字节流，需把HEX字符串转成Uint8Array
+      const hexCmd = '010300000001840A'; // 对应之前的万能指令
+      const data = hexStringToUint8Array(hexCmd);
+      await writer.write(data);
+      log('已发送指令: ' + hexCmd);
+    });
+
+    // 3. 循环接收数据
+    async function readLoop() {
+      try {
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          // 把接收到的ArrayBuffer转成HEX字符串显示
+          const hex = uint8ArrayToHexString(new Uint8Array(value));
+          log('收到数据: ' + hex);
+        }
+      } catch (err) {
+        log('接收错误: ' + err);
+      }
+    }
+
+    // 辅助函数：HEX字符串转Uint8Array
+    function hexStringToUint8Array(hex) {
+      const len = hex.length / 2;
+      const arr = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        arr[i] = parseInt(hex.substr(i * 2, 2), 16);
+      }
+      return arr;
+    }
+
+    // 辅助函数：Uint8Array转HEX字符串
+    function uint8ArrayToHexString(arr) {
+      return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join(' ');
+    }
+
+    // 日志输出
+    function log(msg) {
+      const div = document.getElementById('log');
+      div.innerHTML += '<div>' + msg + '</div>';
+    }
+  </script>
+</body>
+</html>
