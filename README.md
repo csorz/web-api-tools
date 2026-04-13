@@ -174,6 +174,8 @@ npm run dev
 
 确保部署环境使用 HTTPS，否则 Web API 将无法使用。
 
+项目使用 Hash 路由模式，支持部署到任意目录（包括二级目录），无需额外配置。
+
 ## License
 
 MIT

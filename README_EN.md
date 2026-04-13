@@ -179,6 +179,8 @@ npm run dev
 
 Ensure your deployment environment uses HTTPS, otherwise Web APIs will not be available.
 
+The project uses Hash routing mode, supporting deployment to any directory (including subdirectories) without additional configuration.
+
 ## Internationalization
 
 The application supports both Chinese (zh-CN) and English (en-US). You can switch languages using the language toggle button in the sidebar.
